@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
     <style>
         body,
         html {
@@ -174,6 +175,7 @@
 
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
 
         var map = L.map('map').setView(['{{latitude}}', '{{longitude}}'], '{{zoom_view}}');
@@ -340,12 +342,30 @@
             overlayElement.innerHTML += " Downloading";
             updateRemainingTiles();
             setInterval(updateRemainingTiles, 2000);
-        
         }
 
         function clearAll() {
             window.location.href = "{{ url_for('index')}}";
         }
+
+    function sweet_alert(title,text){
+            Swal.fire({
+                title: title,
+                text: text,
+                icon: 'success',
+                confirmButtonText: 'OK'
+                });
+        
+    }
+    if('{{download_completed}}' == 'True'){
+        sweet_alert('Download Completed','Click ok to continue')
+    }
+    else if('{{remaining_tiles}}' == '0'){
+        sweet_alert("Tiles Already Downloaded","click ok to continue");
+    }
+    else if('{{remaining_tiles}}' != '-1'){
+        sweet_alert("{{remaining_tiles}} tiles","Press download from sidebar to start downloading files")
+    }
 
     </script>
 </body>
