@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <style>
+        body,
+        html {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            /* Use a more readable font */
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+
+        #map {
+            flex: 1;
+            border: 2px solid #ddd;
+            /* Add a border around the map */
+            border-radius: 8px;
+        }
+
+        .sidebar {
+            margin-left: 10px;
+            padding: 10px;
+            width: 300px;
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            /* Add a subtle shadow */
+        }
+
+        .sidebar h2 {
+            color: #333;
+        }
+
+        form {
+            margin-top: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #666;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        button {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+        
+        .no-underline {
+            text-decoration: none;
+        }
+        .spinner {
+            width: 20px;
+            height: 20px;
+            margin-top: 5px;
+            margin-left: 125px;
+            position: relative;
+            border-radius: 50%;
+            border: 3px solid transparent;
+            border-top-color: #3498db;
+            -webkit-animation: spin 1s linear infinite;
+            animation: spin 1s linear infinite;
+        }
+
+        @-webkit-keyframes spin {
+            0% { -webkit-transform: rotate(0deg); }
+            100% { -webkit-transform: rotate(360deg); }
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+</style>
+
+</head>
+<body>
+    <div class="container">
+        <div id="map"></div>
+
+        <div class="sidebar">
+            <h5>Tile Downloader</h5>
+            <hr>
+            <button style="background-color:#f44336; width: 100%;" onclick="clearAll()">Clear All</button>
+
+            {% if flag%}
+                <div>
+                    <button style="background-color: lightskyblue; width: 49%; " onclick="handleButtonClick()" value="show">Show Length</button>
+                    <button style="background-color: lightskyblue ;width: 49%;" onclick="hidebuttonclick()" value="show">Hide Length</button>
+                </div>
+            {% endif %}
+
+            <form action="{{ url_for('calculate_tiles') }}" method="post" id="calculate-form">
+                <label>
+                    Latitude
+                    <input type="text" name="latitude" id="latitude" placeholder="Enter Latitude" required
+                        value="{{ request.form.get('latitude', '')}}"  autocomplete="off">
+                </label>
+                <label>
+                    Longitude
+                    <input type="text" name="longitude" id="longitude" placeholder="Enter Longitude" required
+                        value="{{ request.form.get('longitude', '')}}" autocomplete="off">
+                </label>
+                <label>Zoom<input type="number" name="zoom" id="zoom" placeholder="Zoom level" required
+                        value="{{ request.form.get('zoom', '')}}">
+                </label>
+                <label>Distance(KM)<input type="number" id="distance" name="distance" placeholder="Distance" required
+                        value="{{ request.form.get('distance', '')}}">
+                </label>
+                <label>Directory Name<input type="text" id="directory" name="directory" placeholder="Directory Name" required
+                        value="{{ request.form.get('directory', '')}}"  autocomplete="off">
+                </label>
+                
+                {% if not download_completed and remaining_tiles != 0 %}
+                    <button type="submit" name="action" value="calculate"><i class="fa fa-calculator"></i> Calculate Tiles</button>
+                    {% if remaining_tiles >0 %}
+                        <p>Toal Tiles to be downloaded: {{remaining_tiles}}</p>
+                        <p>Expected file size: {{expected_size}}</p>
+                    {% endif %}
+
+                    <button style="background-color: cornflowerblue;" type="submit" onclick="alert_download()" name="action" id="download_strt" value="download"><i class="fa fa-download"></i> Download</button>
+                {% endif %}
+
+                {% if download_completed or remaining_tiles == 0 %}
+                    <button type="submit" name="action" value="calculate"><i class="fa fa-calculator"></i> Re-Caluclate</button>
+                    {% if remaining_tiles ==0 %}
+                        <p>Tiles Already Exist</p>
+                    {% endif %}
+
+                    <button disabled style="background-color:gray;" type="submit" onclick="alert_download()" name="action" value="download">Downloading Completed</button>
+                {% endif %}
+
+                <div id="container" style="text-align: center;">
+                    <div class="overlay">
+                        <p class="message"></p>
+                    </div>
+                    <div id="loadingSpinner" class="spinner" style="display: none;"></div>
+                    <span id="remaining_tiles"></span>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script>
+
+        var map = L.map('map').setView(['{{latitude}}', '{{longitude}}'], '{{zoom_view}}');
+        L.tileLayer('https://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}&s=Ga', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+        
+        let marker_c;
+        let marker;
+
+        map.on("click", (ev) => {
+            if (marker_c) {
+                map.removeLayer(marker_c);
+            }
+
+            if(marker){
+                map.removeLayer(marker)
+            }
+
+            let { lat, lng } = ev.latlng;
+            marker_c = L.marker([lat, lng]).addTo(map);
+            document.querySelector("#latitude").value = lat;
+            document.querySelector("#longitude").value = lng;
+            let popupContent = `${lat}, ${lng}`;
+
+            marker_c.bindPopup(popupContent, { closeButton: false });
+            marker_c.on('mouseover', function () {
+                this.openPopup();
+            });
+            marker_c.on('mouseout', function () {
+                this.closePopup();
+            });
+
+        });
+
+        if ('{{flag}}' == 'True') {
+            if(marker_c){
+                map.removeLayer(marker_c);
+            }
+
+            marker = L.marker(['{{latitude}}', '{{longitude}}']).addTo(map);
+            var customIcon = L.icon({
+                iconUrl: '/static/marker.png',
+                iconSize: [16, 16],
+                iconAnchor: [8.75, 8.75],
+                popupAnchor: [0, 0]
+            });
+
+            marker.bindPopup('{{latitude}}, {{longitude}}', { closeButton: false });
+            marker.on('mouseover', function () {
+                this.openPopup();
+            });
+            marker.on('mouseout', function () {
+                this.closePopup(); // Change the icon back to the default version
+            });
+
+            var points = ['{{points[0]}}', '{{points[1]}}', '{{points[2]}}', '{{points[3]}}'];
+            var marker0 = L.marker([parseFloat(points[0]), parseFloat(points[1])], { icon: customIcon }).addTo(map);
+            var marker1 = L.marker([parseFloat(points[0]), parseFloat(points[3])], { icon: customIcon }).addTo(map);
+            var marker2 = L.marker([parseFloat(points[2]), parseFloat(points[1])], { icon: customIcon }).addTo(map);
+            var marker3 = L.marker([parseFloat(points[2]), parseFloat(points[3])], { icon: customIcon }).addTo(map);
+
+            marker0.bindPopup('{{points[0]}},{{points[1]}}', { closeButton: false });
+            marker1.bindPopup('{{points[0]}},{{points[3]}}', { closeButton: false });
+            marker2.bindPopup('{{points[2]}},{{points[1]}}', { closeButton: false });
+            marker3.bindPopup('{{points[2]}},{{points[3]}}', { closeButton: false });
+
+
+            marker0.on('mouseover', function () {
+                this.openPopup();
+            });
+            marker0.on('mouseout', function () {
+                this.closePopup();
+            });
+
+
+            marker1.on('mouseover', function () {
+                this.openPopup();
+            });
+            marker1.on('mouseout', function () {
+                this.closePopup();
+            });
+
+
+            marker2.on('mouseover', function () {
+                this.openPopup();
+            });
+            marker2.on('mouseout', function () {
+                this.closePopup(); // Change the icon back to the default version
+            });
+
+
+            marker3.on('mouseover', function () {
+                this.openPopup();
+            });
+            marker3.on('mouseout', function () {
+                this.closePopup(); // Change the icon back to the default version
+            });
+        
+        }
+
+        var polylinePoints = [];
+        var blue = ['{{latitude}}', '{{longitude}}']
+        polylinePoints.push([parseFloat(points[0]), parseFloat(points[1])]);
+        polylinePoints.push([parseFloat(points[0]), parseFloat(points[3])]);
+        polylinePoints.push([parseFloat(points[2]), parseFloat(points[3])]);
+        polylinePoints.push([parseFloat(points[2]), parseFloat(points[1])]);
+        polylinePoints.push([parseFloat(points[0]), parseFloat(points[1])]);
+        var polyline = L.polyline(polylinePoints, { color: 'red' }).addTo(map);
+        var length = [[((map.distance(polylinePoints[0], polylinePoints[1])) / 1000).toFixed(2)], [((map.distance(polylinePoints[1], polylinePoints[3]) / 1000).toFixed(2))],
+        [((map.distance(polylinePoints[3], polylinePoints[2]) / 1000)).toFixed(2)], [((map.distance(polylinePoints[2], polylinePoints[0])) / 1000).toFixed(2)]];
+
+        function createCustomDivIcon(text) {
+            return L.divIcon({
+                className: 'custom-div-icon',
+                html: '<div style="position:relative; background-color: rgba(255, 255, 255, 0.8); backdrop-filter: blur(5px); border: 1px solid rgba(0, 0, 0, 0.2); border-radius: 5px; padding: 5px; font-weight: bold;">' + text + '</div>',
+                iconSize: [70, 40],
+                iconAnchor: [40, 20]
+            });
+
+        }
+
+        var textMarkers = [];
+        function handleButtonClick() {
+            var textPositions = [
+                [(polylinePoints[0][0] + polylinePoints[1][0]) / 2, (polylinePoints[0][1] + polylinePoints[1][1]) / 2],
+                [(polylinePoints[1][0] + polylinePoints[3][0]) / 2, (polylinePoints[1][1])],
+                [(polylinePoints[3][0] + polylinePoints[2][0]) / 2, (polylinePoints[3][1] + polylinePoints[2][1]) / 2],
+                [(polylinePoints[2][0] + polylinePoints[0][0]) / 2, (polylinePoints[0][1])]
+            ];
+            for (var i = 0; i < textPositions.length; i++) {
+                var textMarker = L.marker(textPositions[i], { icon: createCustomDivIcon(length[i]) }).addTo(map);
+                textMarkers.push(textMarker);
+            }
+        }
+
+        function hidebuttonclick() {
+            for (var i = 0; i < textMarkers.length; i++) {
+                map.removeLayer(textMarkers[i]);
+            }
+            textMarkers = [];
+        }
+
+        function updateRemainingTiles() {
+            fetch('/remaining_tiles?' + new URLSearchParams({
+                latitude: document.getElementById('latitude').value,
+                longitude: document.getElementById('longitude').value,
+                distance: document.getElementById('distance').value,
+                directory: document.getElementById('directory').value,
+                zoom: document.getElementById('zoom').value
+            }))
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('remaining_tiles').innerText =  (data.tiles_done*100/data.total_count).toFixed(2) + '%';
+            });
+        }
+
+        function alert_download() {
+            const spinnerElement = document.getElementById('loadingSpinner');
+            const overlayElement = document.querySelector('.overlay');
+            const strt = document.getElementById('download_strt');
+            strt.style.display = 'none';
+            spinnerElement.style.display = "block";  
+            overlayElement.innerHTML += " Downloading";
+            updateRemainingTiles();
+            setInterval(updateRemainingTiles, 2000);
+        
+        }
+
+        function clearAll() {
+            window.location.href = "{{ url_for('index')}}";
+        }
+
+    </script>
+</body>
+
+</html>
