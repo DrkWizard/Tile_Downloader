@@ -9,8 +9,6 @@ viewer_directory = ""
 cwd = os.getcwd()
 main = os.path.join(cwd,"map_tile")
 
-folders = [folder for folder in os.listdir(main) if os.path.isdir(os.path.join(main, folder))]
-
 @app.route('/')
 def index():
     flag=False
@@ -53,10 +51,10 @@ def remaining_tiles():
 
 @app.route('/viewtiles', methods=['POST','GET'])
 def view():
+    folders = [folder for folder in os.listdir(main) if os.path.isdir(os.path.join(main, folder))]
     if request.method == 'POST':
         global viewer_directory
         viewer_directory = request.form['dir']
-        print(viewer_directory)
         return render_template('view.html',folders = folders,viewer_directory=viewer_directory)
     
     return render_template('view.html',folders = folders)
