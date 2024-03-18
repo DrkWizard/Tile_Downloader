@@ -4,6 +4,8 @@ import concurrent.futures
 
 app = Flask(__name__)
 
+viewer_directory = 'kanjawla'  #change here the directory name for tile viewer
+
 @app.route('/')
 def index():
     flag=False
@@ -42,6 +44,27 @@ def remaining_tiles():
     top, left, bottom, right = bounding_box(latitude, longitude, distance_km)
     total_count,remaining_tiles,tiles_already_done = number_of_tiles(max_zoom_level, top, left, bottom, right, dir_name)
     return jsonify(total_count=total_count,tiles_done=tiles_already_done)
+
+
+
+@app.route('/viewtiles')
+def view():
+    return render_template('view.html')
+
+
+
+@app.route('/mytiles/<int:z>/<int:x>/<int:y>.jpeg')
+def view_tiles(z, x, y):
+    tile_path = f'map_tile/{viewer_directory}/{z}/{x}/{y}.jpeg'  
+    with open(tile_path, 'rb') as f:
+        tile = f.read()
+    return tile, 200, {'Content-Type': 'image/jpeg'}
+
+if __name__ == '__main__':
+    app.run(debug=True,port=5001)
+
+
+
 
 if __name__ == '__main__':
     app.run(debug=True)

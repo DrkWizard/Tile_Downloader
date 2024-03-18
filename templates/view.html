@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Downloaded Tiles</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script> <!-- jQuery for AJAX -->
+    <style>
+        body,
+        html {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            /* Use a more readable font */
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+
+        #map {
+            flex: 1;
+            border: 2px solid #ddd;
+            /* Add a border around the map */
+            border-radius: 8px;
+        }
+
+        .sidebar {
+            margin-left: 10px;
+            padding: 10px;
+            width: 300px;
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            /* Add a subtle shadow */
+        }
+
+        .sidebar h2 {
+            color: #333;
+        }
+
+        form {
+            margin-top: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #666;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        button {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+        
+        .no-underline {
+            text-decoration: none;
+        }
+        .spinner {
+            width: 20px;
+            height: 20px;
+            margin-top: 5px;
+            margin-left: 125px;
+            position: relative;
+            border-radius: 50%;
+            border: 3px solid transparent;
+            border-top-color: #3498db;
+            -webkit-animation: spin 1s linear infinite;
+            animation: spin 1s linear infinite;
+        }
+
+        @-webkit-keyframes spin {
+            0% { -webkit-transform: rotate(0deg); }
+            100% { -webkit-transform: rotate(360deg); }
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+</style>
+</head>
+<body>
+    <div class="container">
+        <div id="map"></div>
+        <div class="sidebar">
+            <h2>Downloaded Tiles Viewer</h2>
+            <hr>
+            <br>
+            <p style="font-size: small;">Enter Latitude and Longitude to place marker</p>
+            <input type="text" id="coordinates" placeholder="Enter latitude, longitude (e.g., 28.7625, 77.0037)">
+            <button style="background-color: rgb(224, 178, 118);color: #333;" onclick="backtodownloader()"> Back to Downloader</button>
+        </div>
+        
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
+
+    <script>
+        var map = L.map('map').setView([28.762481708265135, 77.00366735458375], 10);
+
+        L.tileLayer('/mytiles/{z}/{x}/{y}.jpeg', {
+            maxZoom: 20,
+            attribution: '&copy; Your Tile Provider'
+        }).addTo(map);
+
+        var marker = L.marker([28.762481708265135, 77.00366735458375]).addTo(map);
+
+        function addOrUpdateMarker() {
+            var coordinates = document.getElementById('coordinates').value.split(',');
+            var lat = parseFloat(coordinates[0]);
+            var lng = parseFloat(coordinates[1]);
+
+            if (isNaN(lat) || isNaN(lng)) {
+                alert('Invalid coordinates! Please enter valid latitude and longitude.');
+                return;
+            }
+
+            if (!marker) {
+                marker = L.marker([lat, lng]).addTo(map);
+            } else {
+                marker.setLatLng([lat, lng]);
+            }
+
+            map.setView([lat, lng], 10);
+        }
+
+        document.getElementById('coordinates').addEventListener('change', addOrUpdateMarker);
+
+        function backtodownloader() {
+            window.location.href = "{{ url_for('index')}}";
+        }
+
+        function showRefreshAlert() {
+            swal({
+                title: "Downloaded Tiles Viewer",
+                text: "Remember to change directory name in python script(app.py)",
+                icon: "info",
+                button: "OK"
+            });
+        }
+
+    // Add event listener for page refresh
+    window.addEventListener("load", function() {
+        showRefreshAlert();
+    });
+    </script>
+</body>
+</html>

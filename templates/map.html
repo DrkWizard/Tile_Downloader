@@ -60,7 +60,7 @@
         button {
             width: 100%;
             padding: 10px;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
             box-sizing: border-box;
             border: 1px solid #ccc;
             border-radius: 4px;
@@ -112,9 +112,9 @@
 
         <div class="sidebar">
             <h5>Tile Downloader</h5>
-            <hr>
+            <button style="background-color: rgb(224, 178, 118);color: #333;" onclick="totileviewer()"> View downloaded tiles</button>
             <button style="background-color:#f44336; width: 100%;" onclick="clearAll()">Clear All</button>
-
+            <hr>
             {% if flag%}
                 <div>
                     <button style="background-color: lightskyblue; width: 49%; " onclick="handleButtonClick()" value="show">Show Length</button>
@@ -189,10 +189,6 @@
         map.on("click", (ev) => {
             if (marker_c) {
                 map.removeLayer(marker_c);
-            }
-
-            if(marker){
-                map.removeLayer(marker)
             }
 
             let { lat, lng } = ev.latlng;
@@ -341,11 +337,15 @@
             spinnerElement.style.display = "block";  
             overlayElement.innerHTML += " Downloading";
             updateRemainingTiles();
-            setInterval(updateRemainingTiles, 10000);
+            setInterval(updateRemainingTiles, 30000);
         }
 
         function clearAll() {
             window.location.href = "{{ url_for('index')}}";
+        }
+
+        function totileviewer() {
+            window.location.href = "{{ url_for('view')}}";
         }
 
     function sweet_alert(title,text){
