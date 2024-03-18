@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -54,6 +55,7 @@
 
         input[type="text"],
         input[type="number"],
+        select,
         button {
             width: 100%;
             padding: 10px;
@@ -73,10 +75,11 @@
         button:hover {
             background-color: #45a049;
         }
-        
+
         .no-underline {
             text-decoration: none;
         }
+
         .spinner {
             width: 20px;
             height: 20px;
@@ -91,17 +94,27 @@
         }
 
         @-webkit-keyframes spin {
-            0% { -webkit-transform: rotate(0deg); }
-            100% { -webkit-transform: rotate(360deg); }
+            0% {
+                -webkit-transform: rotate(0deg);
+            }
+
+            100% {
+                -webkit-transform: rotate(360deg);
+            }
         }
 
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
+            0% {
+                transform: rotate(0deg);
+            }
 
-</style>
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
 </head>
+
 <body>
     <div class="container">
         <div id="map"></div>
@@ -109,25 +122,35 @@
             <h2>Downloaded Tiles Viewer</h2>
             <hr>
             <br>
+            <p style="font-size: small;">Select Directory</p>
+            <form action="{{ url_for('view') }}" method="post" id="">
+                <select name="dir" id="'dir">
+                    {% for option in folders %}
+                    <option value="{{option}}" {% if viewer_directory == option %} selected {% endif %} >{{ option }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit">Get map</button>
+            </form>
+            <br>
             <p style="font-size: small;">Enter Latitude and Longitude to place marker</p>
             <input type="text" id="coordinates" placeholder="Enter latitude, longitude (e.g., 28.7625, 77.0037)">
-            <button style="background-color: rgb(224, 178, 118);color: #333;" onclick="backtodownloader()"> Back to Downloader</button>
+            <button style="background-color: rgb(224, 178, 118);color: #333;" onclick="backtodownloader()"> Back to
+                Downloader</button>
         </div>
-        
+
     </div>
 
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
-    <script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
 
     <script>
-        var map = L.map('map').setView([28.762481708265135, 77.00366735458375], 10);
+        var map = L.map('map').setView([28.762481708265135, 77.00366735458375], 6);
 
         L.tileLayer('/mytiles/{z}/{x}/{y}.jpeg', {
             maxZoom: 20,
             attribution: '&copy; Your Tile Provider'
         }).addTo(map);
 
-        var marker = L.marker([28.762481708265135, 77.00366735458375]).addTo(map);
+        var marker;
 
         function addOrUpdateMarker() {
             var coordinates = document.getElementById('coordinates').value.split(',');
@@ -154,19 +177,7 @@
             window.location.href = "{{ url_for('index')}}";
         }
 
-        function showRefreshAlert() {
-            swal({
-                title: "Downloaded Tiles Viewer",
-                text: "Remember to change directory name in python script(app.py)",
-                icon: "info",
-                button: "OK"
-            });
-        }
-
-    // Add event listener for page refresh
-    window.addEventListener("load", function() {
-        showRefreshAlert();
-    });
     </script>
 </body>
+
 </html>

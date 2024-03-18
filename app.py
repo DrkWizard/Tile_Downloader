@@ -1,10 +1,15 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_file
 from map_downloader import bounding_box, number_of_tiles, download_tiles
 import concurrent.futures
+import os
 
 app = Flask(__name__)
+viewer_directory = ""
 
-viewer_directory = 'kanjawla'  #change here the directory name for tile viewer
+cwd = os.getcwd()
+main = os.path.join(cwd,"map_tile")
+
+folders = [folder for folder in os.listdir(main) if os.path.isdir(os.path.join(main, folder))]
 
 @app.route('/')
 def index():
@@ -46,19 +51,23 @@ def remaining_tiles():
     return jsonify(total_count=total_count,tiles_done=tiles_already_done)
 
 
-
-@app.route('/viewtiles')
+@app.route('/viewtiles', methods=['POST','GET'])
 def view():
-    return render_template('view.html')
+    if request.method == 'POST':
+        global viewer_directory
+        viewer_directory = request.form['dir']
+        print(viewer_directory)
+        return render_template('view.html',folders = folders,viewer_directory=viewer_directory)
+    
+    return render_template('view.html',folders = folders)
+
 
 
 
 @app.route('/mytiles/<int:z>/<int:x>/<int:y>.jpeg')
 def view_tiles(z, x, y):
-    tile_path = f'map_tile/{viewer_directory}/{z}/{x}/{y}.jpeg'  
-    with open(tile_path, 'rb') as f:
-        tile = f.read()
-    return tile, 200, {'Content-Type': 'image/jpeg'}
+    tile_path = f'map_tile/{viewer_directory}/{z}/{x}/{y}.jpeg'
+    return send_file(tile_path)
 
 if __name__ == '__main__':
     app.run(debug=True,port=5001)
