@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>View</title>
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+        <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    </head>
+</head>
+
+<body>
+    <div class="container">
+        <div id="map"></div>
+        <div class="sidebar">
+            <h3>Downloaded Tiles Viewer</h3>
+            <hr>
+            <br>
+            <p style="font-size: small;">Select Directory</p>
+            <form action="{{ url_for('view') }}" method="post" id="">
+                <select name="dir" id="dir">
+                    <option value ="default">Select</option>
+                    {% for option in folders %}
+                    <option value="{{option}}" {% if viewer_directory == option %} selected {% endif %} >{{ option }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit">Get map</button>
+            </form>
+            <br>
+            <p style="font-size: small;">Enter Latitude and Longitude to place marker</p>
+            <input type="text" id="coordinates">
+            <a href = "{{ url_for('index')}}"> <button style="background-color: rgb(224, 178, 118);color: #333;">Back to Downloader</button></a>
+            {% if details and remaining_tiles > 0%}
+                <p>Remaining Tiles: {{remaining_tiles}}</p>
+                <a href = "{{ url_for('continue_download')}}"> <button style="background-color: #3ba6ff;color: #333;">Continue downloading</button></a>
+            {% else %}
+                <p style="">Download Completed</p>
+            {% endif %}
+        </div>
+
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+
+    <script>
+        var map = L.map('map').setView([22, 77] , 5);
+
+        L.tileLayer('/mytiles/{z}/{x}/{y}.jpeg', {
+            maxZoom: 20,
+            attribution: '&copy; Your Tile Provider'
+        }).addTo(map);
+
+        var marker;
+
+        var customIcon = L.icon({
+            iconUrl: '/static/download.png',
+            iconSize: [30, 30],
+            iconAnchor: [8.75, 8.75],
+            popupAnchor: [0, 0]
+        });
+
+        function addOrUpdateMarker() {
+            var coordinates = document.getElementById('coordinates').value.split(',');
+            var lat = parseFloat(coordinates[0]);
+            var lng = parseFloat(coordinates[1]);
+
+            if (isNaN(lat) || isNaN(lng)) {
+                alert('Invalid coordinates! Please enter valid latitude and longitude.');
+                return;
+            }
+
+            if (!marker) {
+                marker = L.marker([lat, lng]).addTo(map);
+            } else {
+                marker.setLatLng([lat, lng]);
+            }
+        }
+        document.getElementById('coordinates').addEventListener('change', addOrUpdateMarker);
+
+    </script>
+</body>
+
+</html>

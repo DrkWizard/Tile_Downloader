@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div id="map"></div>
+
+        <div class="sidebar">
+            <h5>Tile Downloader</h5>
+            
+            <a href="{{url_for('view')}}" target="_blank"> <button style="background-color: rgb(224, 178, 118);color: #333;"> View downloaded tiles</button> </a>
+                <hr>
+                <label>Directory Name
+                    <input type="text" id="directory" name="directory" placeholder="Directory Name" required  autocomplete="off" >
+
+                </label>
+                <label>
+                    Latitude
+                    <input type="text" name="latitude" id="latitude" placeholder="Enter Latitude" required  autocomplete="off">
+                </label>
+                <label>
+                    Longitude
+                    <input type="text" name="longitude" id="longitude" placeholder="Enter Longitude" required autocomplete="off" >
+                </label>
+                <label>Zoom from<input type="number" name="zoom_start" id="zoom_start" placeholder="Zoom level" required max="22" min="1" autocomplete="off">
+                </label>
+                <label>Zoom to<input type="number" name="zoom_end" id="zoom_end" placeholder="Zoom level" required max="22" min="1" autocomplete="off">
+            </label>
+                <button type="submit" name="calculate" id="calculate" ><i class="fa fa-calculator"></i>Calculate Tiles</button>
+                <div id="container" style="text-align: center;">
+                    <div class="overlay">
+                        <p class="message"></p>
+                    </div>
+                    <div id="loadingSpinner" class="spinner" style="display: none;"></div>
+                    <span id="remaining_tiles"></span>
+                </div>
+
+                
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+
+        if("{{internet}}"=="False"){
+            Swal.fire({
+                title: "The Internet?",
+                text: "That thing is still around?",
+                icon: "question"
+            });
+        }
+        else{
+        var map = L.map('map').setView([22, 77] , 5);
+        L.tileLayer('https://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}&s=Ga', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+        
+        var calculatebtn = document.getElementById("calculate");
+        calculatebtn.setAttribute("disabled", "disabled");
+
+        var dir = document.getElementById("directory");
+        var zoom_s = document.getElementById("zoom_start");
+        var max_zoom_lvl = document.getElementById("zoom_end");
+        var southWest ;
+        var northEast ;
+        var northWest;
+        var southEast ;
+        var center;
+        let marker;
+        var drawnItems = new L.FeatureGroup();
+            map.addLayer(drawnItems);
+
+            var drawControl = new L.Control.Draw({
+                draw: {
+                    polygon: false,
+                    polyline: false,
+                    circle: false,
+                    circlemarker: false,
+                    marker: false,
+                    rectangle: 'Draw an awesome polygon'
+                },
+                edit: {
+                    featureGroup: drawnItems,
+                    edit: false
+                },
+                delete:{
+                    save: false
+                },
+                position: 'topright'
+            });
+            map.addControl(drawControl);
+
+            var drawnRectangle = null;
+            var value;
+
+            map.on(L.Draw.Event.CREATED, function (event) {
+                if (drawnRectangle) {
+                    map.removeLayer(drawnRectangle);
+                }
+                var layer = event.layer;
+                drawnItems.addLayer(layer);
+                drawnRectangle = layer;
+
+                // Get the bounds of the drawn rectangle
+                bounds = layer.getBounds();
+                southWest = bounds.getSouthWest();
+                northEast = bounds.getNorthEast();
+                northWest = L.latLng(northEast.lat, southWest.lng);
+                southEast = L.latLng(southWest.lat, northEast.lng);
+                center = bounds.getCenter();
+
+                if (marker) {
+                    map.removeLayer(marker)
+                }
+                marker = L.marker(center).addTo(map);
+                document.querySelector("#latitude").value = center.lat;
+                document.querySelector("#longitude").value = center.lng;
+
+                if (dir.value.trim() !== "" && max_zoom_lvl.value.trim() !== "") {
+                    calculatebtn.removeAttribute("disabled");
+                    value = [northWest, northEast, southWest, southEast, center,dir.value,max_zoom_lvl.value,zoom_s.value];
+                } else {
+                    calculatebtn.setAttribute("disabled", "disabled");
+                }
+
+            });
+
+            dir.addEventListener("input", function() {
+                if (dir.value.trim() !== "" && max_zoom_lvl.value.trim() != "" &&  zoom_s.value.trim() != "" && drawnRectangle) {
+                    calculatebtn.removeAttribute("disabled");
+                    value = [northWest, northEast, southWest, southEast, center,dir.value,max_zoom_lvl.value,zoom_s.value];
+                } else {
+                    calculatebtn.setAttribute("disabled", "disabled");
+                    
+                }
+            })
+            max_zoom_lvl.addEventListener("input", function() {
+                // Enable the submit button if the input field is not empty
+                if (dir.value.trim() !== "" && max_zoom_lvl.value.trim() != "" && zoom_s.value.trim() != "" && drawnRectangle) {
+                    calculatebtn.removeAttribute("disabled");
+                    value = [northWest, northEast, southWest, southEast, center,dir.value,max_zoom_lvl.value,zoom_s.value];
+                } else {
+                    calculatebtn.setAttribute("disabled", "disabled");
+                }
+            })
+            zoom_s.addEventListener("input", function() {
+                // Enable the submit button if the input field is not empty
+                if (dir.value.trim() !== "" && max_zoom_lvl.value.trim() != "" &&  zoom_s.value.trim() != "" && drawnRectangle) {
+                    calculatebtn.removeAttribute("disabled");
+                    value = [northWest, northEast, southWest, southEast, center,dir.value,max_zoom_lvl.value,zoom_s.value];
+                } else {
+                    calculatebtn.setAttribute("disabled", "disabled");
+                }
+            })
+
+
+        map.on('draw:deletestart', function () {
+            if (drawnRectangle) {
+                drawnItems.removeLayer(drawnRectangle);
+                drawnRectangle = null;
+                map.removeLayer(marker);
+                document.querySelector("#latitude").value = ""
+            document.querySelector("#longitude").value = ""
+            }
+        });
+        
+        map.on("click", (ev) => {
+
+            if(!drawnRectangle){
+                if (marker) {
+                    map.removeLayer(marker);
+                }
+            let { lat, lng } = ev.latlng;
+                marker = L.marker([lat, lng]).addTo(map);
+                document.querySelector("#latitude").value = lat;
+                document.querySelector("#longitude").value = lng;
+                let popupContent = `${lat}, ${lng}`;
+                marker.bindPopup(popupContent, { closeButton: false });
+                marker.on('mouseover', function () {
+                    this.openPopup();
+                });
+                marker.on('mouseout', function () {
+                    this.closePopup();
+                });
+            }
+        })
+
+        function updateZoomLevel() {
+            var zoomLevel = map.getZoom();
+            console.log("zoom:" + zoomLevel)
+        }
+        
+        updateZoomLevel();
+        map.on('zoomend', updateZoomLevel);
+
+        function download_tiles() {
+            $.ajax({
+                url: '/download',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({'value': 1}),
+        
+                success: function(response) {
+                    if (response.success) {
+                        Swal.fire({
+                            title: "Download Completed",
+                            text: response.status,
+                            icon: "success"
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                // Redirect to another page
+                                window.location.href = "{{ url_for('index')}}";
+                            }
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: "question",
+                            title: "Are you connected?",
+                            text: response.error,
+                            showDenyButton: true,
+                            confirmButtonText: "Try Again",
+                            denyButtonText: `Reset`
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                download_tiles();
+                            } else if (result.isDenied) {
+                                window.location.href = "{{ url_for('index')}}";
+                            }
+                        });
+                    }
+                },
+                error: function(xhr, status, error) {
+                    Swal.fire({
+                        title: "Oops",
+                        text: "An error occurred while downloading",
+                        showDenyButton: true,
+                        confirmButtonText: "Try Again",
+                        denyButtonText: `Reset`
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            download_tiles();
+                        } else if (result.isDenied) {
+                            window.location.href = "{{ url_for('index')}}";
+                        }
+                    });
+                },
+            });
+        }
+        
+
+        function sweet_alert(result, remaining_tiles, expected_size) {
+            Swal.fire({
+                title: "Total Tiles in the area: " + result,
+                text: "Remaining tiles: " + remaining_tiles + "\n" + "Expected size: " + expected_size + " GB",
+                icon: "info",
+                showCloseButton: true,
+                showCancelButton: true,
+                focusConfirm: true,
+                confirmButtonText: "Download",
+                confirmButtonAriaLabel: "Download",
+                cancelButtonText: "Cancel",
+                cancelButtonAriaLabel: "Cancel"
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    document.getElementById("directory").disabled = true
+                    document.getElementById("latitude").disabled = true
+                    document.getElementById("longitude").disabled = true
+                    document.getElementById("zoom_start").disabled = true
+                    document.getElementById("zoom_end").disabled = true
+                    var calculatebtn = document.getElementById("calculate").style.display = "none";
+                    const spinnerElement = document.getElementById('loadingSpinner');
+                    const overlayElement = document.querySelector('.overlay');
+                    spinnerElement.style.display = "block";  
+                    overlayElement.innerHTML += " Downloading";
+                    updateRemainingTiles();
+                    setInterval(updateRemainingTiles, 1000)
+                    download_tiles()
+                    
+                }
+            });
+        }
+        
+
+        $(document).ready(function() {
+            $('#calculate').click(function() {
+                var data = value
+                $.ajax({
+                    url: '/calculate',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({'value': data}),
+                    success: function(response) {
+                        sweet_alert(response.result,response.remaining,response.size)
+
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Error:', error);
+                    }
+                });
+            });
+        });
+    }
+
+    function updateRemainingTiles(){
+        fetch('/remaining_tiles')
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('remaining_tiles').innerText =  (data.tiles_done*100/data.total_count).toFixed(2) + '%';
+        });
+}
+
+
+    </script>
+</body>
+
+</html>

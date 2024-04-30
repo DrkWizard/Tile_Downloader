@@ -1,0 +1,187 @@
+from flask import Flask, render_template, request, jsonify, send_file
+import os
+import concurrent.futures
+from map_downloader import number_of_tiles, download_tiles
+import time,requests
+
+app = Flask(__name__)
+
+data = None
+center = None
+directory = None
+zoom_lvl = None #ending zoom
+zoom_start = None #starting zoom
+northwest = None
+northeast = None
+southwest = None
+southeast = None
+coordinates = []
+total_count = 0
+remaining_tiles = 0
+tiles_done = 0
+
+cwd = os.getcwd()
+main = os.path.join(cwd, "map_tile")
+if not os.path.exists(main):
+    os.makedirs(main)
+folders = [folder for folder in os.listdir(main) if os.path.isdir(os.path.join(main, folder))]
+
+
+
+def check_internet_connection():
+    try:
+        response = requests.get("http://www.google.com", timeout=4)
+        if response.status_code == 200:
+            return True 
+        else:
+            return False  
+    except requests.ConnectionError:
+        return False 
+
+@app.route('/')
+def index():
+    internet = check_internet_connection()    
+    return render_template('map.html',internet=internet)
+
+
+@app.route('/calculate', methods=['POST'])
+def calculate():
+    global data, center, southeast, southwest, northeast, northwest, directory, zoom_lvl, remaining_tiles, total_count, tiles_done, zoom_start
+    data = request.json
+    center = data["value"][4]
+    directory = data["value"][5]
+    zoom_lvl = int(data["value"][6])
+    zoom_start = int(data["value"][7])
+    northwest = data["value"][0]
+    northeast = data["value"][1]
+    southwest = data["value"][2]
+    southeast = data["value"][3]
+    total_count, remaining_tiles, tiles_done = number_of_tiles(zoom_start,zoom_lvl, northwest["lat"], northwest["lng"],southwest["lat"], southeast["lng"], directory)
+    expected_size = round(remaining_tiles * 28 / (1024 ** 2), 3)
+    return jsonify({'result': total_count, 'size': expected_size, 'remaining': remaining_tiles})
+
+
+@app.route('/downloadstart')
+def calculate_success():
+    internet = check_internet_connection()    
+    calculateSuccess = True
+    return render_template("map.html",calculateSuccess=calculateSuccess,internet=internet)
+
+
+@app.route('/downloadcont')
+def continue_download():
+    internet = check_internet_connection()    
+    text_path = os.path.join(main, viewer_directory, "details.txt")
+    with open(text_path, "r") as file:
+        lines = file.readlines()
+        top = lines[1].strip().split(sep=":")[1]
+        left = lines[2].strip().split(sep=":")[1]
+        bottom = lines[3].strip().split(sep=":")[1]
+        right = lines[4].strip().split(sep=":")[1]
+        zoom_s = lines[5].strip().split(sep=":")[1]
+        zoom_e = lines[6].strip().split(sep=":")[1]
+    points = [top,left,bottom,right]
+    return render_template("continuemap.html", internet=internet,zoom_s=zoom_s,zoom_e=zoom_e,directory=viewer_directory,points = points)
+
+
+@app.route('/download', methods=['POST'])
+def download():
+    try:
+        d = request.json
+        if d["value"] == 1:
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future = executor.submit(download_tiles,zoom_start, zoom_lvl, directory, northwest["lat"], northwest["lng"], southwest["lat"], southeast["lng"])
+                result = future.result()
+                print(result)
+                if result:
+                    return jsonify({'success': True})
+                else:
+                    raise Exception("Failed to download Tile")
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+    
+    
+@app.route('/continue', methods=['POST'])
+def continue_d():
+    text_path = os.path.join(main, viewer_directory, "details.txt")
+    with open(text_path, "r") as file:
+        lines = file.readlines()
+        top = lines[1].strip().split(sep=":")[1]
+        left = lines[2].strip().split(sep=":")[1]
+        bottom = lines[3].strip().split(sep=":")[1]
+        right = lines[4].strip().split(sep=":")[1]
+        zoom_s = lines[5].strip().split(sep=":")[1]
+        zoom_e = lines[6].strip().split(sep=":")[1]
+    try:
+        d = request.json
+        if d["value"] == 1:
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future = executor.submit(download_tiles,int(zoom_s), int(zoom_e), viewer_directory, float(top), float(left), float(bottom), float(right))
+                result = future.result()
+                print(result)
+                if result:
+                    return jsonify({'success': True})
+                else:
+                    raise Exception("Failed to download Tile")
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+        
+        
+        
+@app.route('/viewtiles', methods=['POST', 'GET'])
+def view():
+    folders = [folder for folder in os.listdir(main) if os.path.isdir(os.path.join(main, folder))]
+    remaining_tiles = -1
+    if request.method == 'POST':
+        global viewer_directory
+        viewer_directory = request.form['dir']
+        try:
+            details = True
+            text_path = os.path.join(main, viewer_directory, "details.txt")
+            
+            with open(text_path, "r") as file:
+                lines = file.readlines()
+                top_h = lines[1].strip().split(sep=":")[1]
+                left_h = lines[2].strip().split(sep=":")[1]
+                bottom_h = lines[3].strip().split(sep=":")[1]
+                right_h = lines[4].strip().split(sep=":")[1]
+                zooms_h = lines[5].strip().split(sep=":")[1]
+                zoom_h = lines[6].strip().split(sep=":")[1]
+                total_count, remaining_tiles, tiles_done = number_of_tiles(int(zooms_h),int(zoom_h), float(top_h), float(left_h),float(bottom_h),float(right_h), viewer_directory)
+        except:
+            print("error")
+        return render_template('view.html', folders=folders, viewer_directory=viewer_directory,details=details,remaining_tiles=remaining_tiles)
+    return render_template('view.html', folders=folders)
+
+
+@app.route('/mytiles/<int:z>/<int:x>/<int:y>.jpeg')
+def view_tiles(z, x, y):
+    tile_path = f'map_tile/{viewer_directory}/{z}/{x}/{y}.jpeg'
+    return send_file(tile_path)
+
+
+@app.route('/remaining_tiles', methods=['GET'])
+def remaining_tiles():
+    total_count, remaining_tiles, tiles_done = number_of_tiles(zoom_start,zoom_lvl, northwest["lat"], northwest["lng"],southwest["lat"], southeast["lng"], directory)
+    return jsonify(total_count=total_count, tiles_done=tiles_done)
+
+@app.route('/remaining_tiles_cont', methods=['GET'])
+def remaining_tiles_cont():
+    text_path = os.path.join(main, viewer_directory, "details.txt")
+    with open(text_path, "r") as file:
+        lines = file.readlines()
+        top = lines[1].strip().split(sep=":")[1]
+        left = lines[2].strip().split(sep=":")[1]
+        bottom = lines[3].strip().split(sep=":")[1]
+        right = lines[4].strip().split(sep=":")[1]
+        zoom_s = lines[5].strip().split(sep=":")[1]
+        zoom_e = lines[6].strip().split(sep=":")[1]
+    total_count, remaining_tiles, tiles_done = number_of_tiles(int(zoom_s),int(zoom_e), float(top), float(left),float(bottom),float(right), viewer_directory)
+    return jsonify(total_count=total_count, tiles_done=tiles_done)
+
+
+
+
+if __name__ == '__main__':
+    app.run(debug=True, port=5000)

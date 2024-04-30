@@ -1,0 +1,126 @@
+body,
+html {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+}
+
+.container {
+    display: flex;
+    height: 100vh;
+}
+
+#map {
+    flex: 1;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+}
+
+.sidebar {
+    margin-left: 10px;
+    padding: 10px;
+    width: 300px;
+    background-color: #f9f9f9;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.sidebar h2 {
+    color: #333;
+}
+
+form {
+    margin-top: 20px;
+}
+
+label {
+    display: block;
+    margin-bottom: 8px;
+    color: #666;
+}
+input,
+input[type="text"],
+input[type="number"],
+select,
+button {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 10px;
+    box-sizing: border-box;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+button {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #45a049;
+}
+button[disabled] {
+    cursor: not-allowed;
+    background-color: gray;
+
+}
+.no-underline {
+    text-decoration: none;
+}
+
+
+/* Customize Leaflet.draw buttons */
+.leaflet-draw-toolbar a {
+    background-color: #4CAF50; /* Green background color */
+    color: white;
+    text-align: center;
+    text-decoration: none;
+    font-size: 16px;
+    border-radius: 5px;
+    border: none;
+    cursor: pointer;
+}
+
+/* Style for the "Draw Rectangle" button */
+.leaflet-draw-toolbar .leaflet-draw-draw-rectangle {
+    background-color: #007BFF; /* Blue background color */
+}
+
+
+/* Style for the "Delete Features" button */
+.leaflet-draw-toolbar .leaflet-draw-edit-remove {
+    background-color: #DC3545; /* Red background color */
+}
+
+.leaflet-draw-tooltip {
+    display: none !important;
+}
+.leaflet-draw-actions{
+    display: none !important
+}
+
+.spinner {
+    width: 20px;
+    height: 20px;
+    margin-top: 5px;
+    margin-left: 125px;
+    position: relative;
+    border-radius: 50%;
+    border: 3px solid transparent;
+    border-top-color: #3498db;
+    -webkit-animation: spin 1s linear infinite;
+    animation: spin 1s linear infinite;
+}
+
+@-webkit-keyframes spin {
+    0% { -webkit-transform: rotate(0deg); }
+    100% { -webkit-transform: rotate(360deg); }
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
