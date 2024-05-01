@@ -106,10 +106,10 @@ def downloader(zoom, output_dir, xs, xe, ys, ye):
                     print(f" [+] Zoom : {zoom} | Downloader tile {filename}")
                 else:
                     print(f' [+] Failed to download tile {filename} | Status Code: {response.status_code}')
+                    
 
-
-def download_tiles(zoom_start,max_zoom_level, dir_name, top, left, bottom, right):
-
+def download_tiles(zoom_start,max_zoom_level, dir_name, top, left, bottom, right,center):
+    print(center)
     if not os.path.exists(os.path.join(main,dir_name)):
         os.makedirs(os.path.join(main,dir_name))
         text_path = os.path.join(main,dir_name,"details.txt")
@@ -121,6 +121,8 @@ bottom: {bottom}
 right: {right}
 zoom start: {zoom_start}
 zoom end: {max_zoom_level}
+center lat: {center["lat"]}
+center lng: {center["lng"]}
 Date downloaded: {datetime.now()}""")
     if max_zoom_level <= 22:
         for zoom in range(zoom_start, max_zoom_level + 1):

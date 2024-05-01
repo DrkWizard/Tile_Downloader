@@ -25,6 +25,7 @@
             <form action="{{ url_for('view') }}" method="post" id="">
                 <select name="dir" id="dir">
                     <option value ="default">Select</option>
+                    <option value ="all">All</option>
                     {% for option in folders %}
                     <option value="{{option}}" {% if viewer_directory == option %} selected {% endif %} >{{ option }}</option>
                     {% endfor %}
@@ -41,6 +42,12 @@
             {% else %}
                 <p style="">Download Completed</p>
             {% endif %}
+            {% if details%}
+            ----------------------Details----------------------
+            Zoom from: {{zooms}}<br>
+            Zoom to: {{zoome}}<br>
+            {{date}}
+            {% endif %}
         </div>
 
     </div>
@@ -48,7 +55,7 @@
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
 
     <script>
-        var map = L.map('map').setView([22, 77] , 5);
+        var map = L.map('map').setView([22, 77] , 3);
 
         L.tileLayer('/mytiles/{z}/{x}/{y}.jpeg', {
             maxZoom: 20,
@@ -56,13 +63,21 @@
         }).addTo(map);
 
         var marker;
-
+        let marker_i;
         var customIcon = L.icon({
             iconUrl: '/static/download.png',
             iconSize: [30, 30],
             iconAnchor: [8.75, 8.75],
             popupAnchor: [0, 0]
         });
+
+        if("{{details}}"=="True"){
+
+            marker_i = L.marker(["{{marker_lat}}","{{marker_lng}}"]).addTo(map)
+
+        }
+
+
 
         function addOrUpdateMarker() {
             var coordinates = document.getElementById('coordinates').value.split(',');

@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, send_file
+from flask import Flask, render_template, request, jsonify, send_file, send_from_directory
 import os
 import concurrent.futures
 from map_downloader import number_of_tiles, download_tiles
@@ -15,7 +15,7 @@ northwest = None
 northeast = None
 southwest = None
 southeast = None
-coordinates = []
+center = None
 total_count = 0
 remaining_tiles = 0
 tiles_done = 0
@@ -24,7 +24,7 @@ cwd = os.getcwd()
 main = os.path.join(cwd, "map_tile")
 if not os.path.exists(main):
     os.makedirs(main)
-folders = [folder for folder in os.listdir(main) if os.path.isdir(os.path.join(main, folder))]
+
 
 
 
@@ -56,8 +56,17 @@ def calculate():
     northeast = data["value"][1]
     southwest = data["value"][2]
     southeast = data["value"][3]
+    center = data["value"][8]
     total_count, remaining_tiles, tiles_done = number_of_tiles(zoom_start,zoom_lvl, northwest["lat"], northwest["lng"],southwest["lat"], southeast["lng"], directory)
-    expected_size = round(remaining_tiles * 28 / (1024 ** 2), 3)
+    expected_size_kb = round(remaining_tiles * 28 , 3)
+    expected_size_mb = round(expected_size_kb / 1024 , 3)
+    expected_size_gb = round(expected_size_mb / 1024, 3)
+    if expected_size_gb > 1:
+        expected_size = f"{expected_size_gb} GB"
+    elif expected_size_mb > 1:
+        expected_size = f"{expected_size_mb} MB"
+    else:
+        expected_size = f"{expected_size_kb} KB"    
     return jsonify({'result': total_count, 'size': expected_size, 'remaining': remaining_tiles})
 
 
@@ -90,7 +99,7 @@ def download():
         d = request.json
         if d["value"] == 1:
             with concurrent.futures.ThreadPoolExecutor() as executor:
-                future = executor.submit(download_tiles,zoom_start, zoom_lvl, directory, northwest["lat"], northwest["lng"], southwest["lat"], southeast["lng"])
+                future = executor.submit(download_tiles,zoom_start, zoom_lvl, directory, northwest["lat"], northwest["lng"], southwest["lat"], southeast["lng"],center)
                 result = future.result()
                 print(result)
                 if result:
@@ -148,17 +157,36 @@ def view():
                 right_h = lines[4].strip().split(sep=":")[1]
                 zooms_h = lines[5].strip().split(sep=":")[1]
                 zoom_h = lines[6].strip().split(sep=":")[1]
+                marker_lat = lines[7].strip().split(sep=":")[1]
+                marker_lng = lines[8].strip().split(sep=":")[1]
+                
                 total_count, remaining_tiles, tiles_done = number_of_tiles(int(zooms_h),int(zoom_h), float(top_h), float(left_h),float(bottom_h),float(right_h), viewer_directory)
+            return render_template('view.html', folders=folders, viewer_directory=viewer_directory,details=details,remaining_tiles=remaining_tiles,marker_lat = marker_lat,marker_lng=marker_lng,date=lines[9], zooms = zooms_h,zoome=zoom_h )
         except:
-            print("error")
-        return render_template('view.html', folders=folders, viewer_directory=viewer_directory,details=details,remaining_tiles=remaining_tiles)
+            details = False
+            marker_lat = 0
+            marker_lng = 0
+            lines = [0]*10
+            print("All Folder therefore no text file read")
+        return render_template('view.html', folders=folders, viewer_directory=viewer_directory,details=details,remaining_tiles=remaining_tiles )
     return render_template('view.html', folders=folders)
 
 
 @app.route('/mytiles/<int:z>/<int:x>/<int:y>.jpeg')
 def view_tiles(z, x, y):
-    tile_path = f'map_tile/{viewer_directory}/{z}/{x}/{y}.jpeg'
-    return send_file(tile_path)
+    if viewer_directory != "all":
+        tile_path = f'map_tile/{viewer_directory}/{z}/{x}/{y}.jpeg'
+        if os.path.exists(tile_path):
+                return send_from_directory(os.path.join(main, viewer_directory, str(z), str(x)), f'{y}.jpeg')
+        return "done"
+    else:
+        folders = [folder for folder in os.listdir(main) if os.path.isdir(os.path.join(main, folder))]
+        for folder in folders:
+            tile_path = os.path.join(main, folder, str(z), str(x), f'{y}.jpeg')
+            if os.path.exists(tile_path):
+                return send_from_directory(os.path.join(main, folder, str(z), str(x)), f'{y}.jpeg')
+    return "done"
+        
 
 
 @app.route('/remaining_tiles', methods=['GET'])
@@ -179,6 +207,7 @@ def remaining_tiles_cont():
         zoom_e = lines[6].strip().split(sep=":")[1]
     total_count, remaining_tiles, tiles_done = number_of_tiles(int(zoom_s),int(zoom_e), float(top), float(left),float(bottom),float(right), viewer_directory)
     return jsonify(total_count=total_count, tiles_done=tiles_done)
+
 
 
 
