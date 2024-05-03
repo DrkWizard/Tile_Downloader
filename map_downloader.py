@@ -109,7 +109,6 @@ def downloader(zoom, output_dir, xs, xe, ys, ye):
                     
 
 def download_tiles(zoom_start,max_zoom_level, dir_name, top, left, bottom, right,center):
-    print(center)
     if not os.path.exists(os.path.join(main,dir_name)):
         os.makedirs(os.path.join(main,dir_name))
         text_path = os.path.join(main,dir_name,"details.txt")

@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, jsonify, send_file, send_from
 import os
 import concurrent.futures
 from map_downloader import number_of_tiles, download_tiles
-import time,requests
+import time,requests,re
 
 app = Flask(__name__)
 
@@ -25,9 +25,14 @@ main = os.path.join(cwd, "map_tile")
 if not os.path.exists(main):
     os.makedirs(main)
 
-
-
-
+def modify(filepath, pattern, replacement):
+    with open(filepath, "r+") as file:
+        lines = file.readlines()
+        modified_lines = [re.sub(pattern, replacement, line) for line in lines]
+        file.seek(0)
+        file.truncate()
+        file.writelines(modified_lines)
+        
 def check_internet_connection():
     try:
         response = requests.get("http://www.google.com", timeout=4)
@@ -109,7 +114,6 @@ def download():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
     
-    
 @app.route('/continue', methods=['POST'])
 def continue_d():
     text_path = os.path.join(main, viewer_directory, "details.txt")
@@ -119,15 +123,16 @@ def continue_d():
         left = lines[2].strip().split(sep=":")[1]
         bottom = lines[3].strip().split(sep=":")[1]
         right = lines[4].strip().split(sep=":")[1]
-        zoom_s = lines[5].strip().split(sep=":")[1]
-        zoom_e = lines[6].strip().split(sep=":")[1]
     try:
         d = request.json
         if d["value"] == 1:
+            zoom_s = int(d["start"])
+            zoom_e = int(d["end"])
+            modify(text_path, r'^.*zoom start:.*$', f"zoom start: {zoom_s}")
+
             with concurrent.futures.ThreadPoolExecutor() as executor:
-                future = executor.submit(download_tiles,int(zoom_s), int(zoom_e), viewer_directory, float(top), float(left), float(bottom), float(right))
+                future = executor.submit(download_tiles,int(zoom_s), int(zoom_e), viewer_directory, float(top), float(left), float(bottom), float(right),center)
                 result = future.result()
-                print(result)
                 if result:
                     return jsonify({'success': True})
                 else:

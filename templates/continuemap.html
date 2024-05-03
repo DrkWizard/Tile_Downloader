@@ -24,12 +24,9 @@
                     <input type="text" id="directory" name="directory" value =" {{directory}}" required  autocomplete="off" disabled>
 
                 </label>
-                <label>Zoom from
-                    <input type="number" name="zoom_start" id="zoom_start" value= {{zoom_s}} required autocomplete="off" disabled>
-                </label>
-                
-                <label>Zoom to<input type="number" name="zoom_end" id="zoom_end" value = {{zoom_e}} required  autocomplete="off" disabled>
-            </label>
+                <label>Zoom Range</label>
+                <input type="number" name="zoom_start" id="zoom_start" value={{zoom_s}}>
+                <input type="number" name="zoom_end" id="zoom_end" value={{zoom_e}}>
                 <button type="submit" name="download" id="download" onclick="download_button()"><i class="fa fa-download"></i>Download Tiles</button>
                 <div id="container" style="text-align: center;">
                     <div class="overlay">
@@ -78,11 +75,13 @@
             map.on('zoomend', updateZoomLevel);
 
             function download_tiles() {
+                start = document.getElementById("zoom_start").value
+                end = document.getElementById("zoom_end").value
                 $.ajax({
                     url: '/continue',
                     method: 'POST',
                     contentType: 'application/json',
-                    data: JSON.stringify({'value': 1}),
+                    data: JSON.stringify({'value': 1,'start':start,'end':end}),
             
                     success: function(response) {
                         if (response.success) {
