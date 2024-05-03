@@ -21,6 +21,9 @@
             <a href="{{url_for('view')}}" target="_blank"> <button style="background-color: rgb(224, 178, 118);color: #333;"> View downloaded tiles</button> </a>
             <label>
             <input type="text" id="coordinates" placeholder="Lattitude, Longitude" autocomplete="off"></label>
+            <p id="length"></p>
+            <p id="breadth"></p>
+            <p id="area"></p>
                 <hr>
                 <label>Directory Name</label>
                     <input type="text" id="directory" name="directory" placeholder="Directory Name" required  autocomplete="off" >
@@ -99,10 +102,6 @@
         var southEast ;
         var center;
         let marker;
-        var lengthLine 
-        var breadthLine
-        var lengthTextMarker
-        var breadthTextMarker
 
         function addOrUpdateMarker() {
             var coordinates = document.getElementById('coordinates').value.split(',');
@@ -151,10 +150,6 @@
                 if (drawnRectangle) {
                     map.removeLayer(drawnRectangle);
                     map.removeLayer(marker);
-                    map.removeLayer(lengthLine);
-                    map.removeLayer(breadthLine);
-                    map.removeLayer(lengthTextMarker);
-                    map.removeLayer(breadthTextMarker);
                 }
                 var layer = event.layer;
                 drawnItems.addLayer(layer);
@@ -171,24 +166,12 @@
                 var breadthCenter = L.latLng(northEast.lat, center.lng);
             
                 // Draw lines from the center to the centers of length and breadth
-                lengthLine = L.polyline([center, lengthCenter], { color: 'red' }).addTo(map);
-                breadthLine = L.polyline([center, breadthCenter], { color: 'red' }).addTo(map);
                 var length= center.distanceTo(lengthCenter) / 1000; // Convert to kilometers
                 var breadth = center.distanceTo(breadthCenter) / 1000;
-                lengthTextMarker = L.marker(lengthCenter, {
-                    icon: L.divIcon({
-                        className: 'text-label',
-                        html: length.toFixed(2) + ' km',
-                        iconAnchor: [0, 0]
-                    })
-                }).addTo(map);
-                breadthTextMarker = L.marker(breadthCenter, {
-                    icon: L.divIcon({
-                        className: 'text-label',
-                        html: breadth.toFixed(2) + ' km',
-                        iconAnchor: [0, 0]
-                    })
-                }).addTo(map);
+                document.getElementById('length').textContent = "length: " + 2*length.toFixed(2) + " KM"
+                document.getElementById('breadth').textContent = "breadth: " + 2*breadth.toFixed(2) + " KM"
+                document.getElementById('area').textContent = "area covered: " + (4*length*breadth).toFixed(2) + " KM square"
+            
 
 
                 if (marker) {
@@ -258,6 +241,9 @@
                 document.querySelector("#latitude").value = ""
                 document.querySelector("#longitude").value = ""
                 document.querySelector("#coordinates").value = ""
+                document.getElementById('length').textContent = ""
+                document.getElementById('breadth').textContent = ""
+                document.getElementById('area').textContent = ""
             }
         });
         
