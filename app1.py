@@ -71,8 +71,12 @@ def calculate():
     elif expected_size_mb > 1:
         expected_size = f"{expected_size_mb} MB"
     else:
-        expected_size = f"{expected_size_kb} KB"    
-    return jsonify({'result': total_count, 'size': expected_size, 'remaining': remaining_tiles})
+        expected_size = f"{expected_size_kb} KB"  
+    if zoom_lvl<zoom_start:
+        error = True
+    else:
+        error = False 
+    return jsonify({'result': total_count, 'size': expected_size, 'remaining': remaining_tiles,'error':error})
 
 
 @app.route('/downloadstart')
@@ -166,7 +170,7 @@ def view():
                 marker_lng = lines[8].strip().split(sep=":")[1]
                 
                 total_count, remaining_tiles, tiles_done = number_of_tiles(int(zooms_h),int(zoom_h), float(top_h), float(left_h),float(bottom_h),float(right_h), viewer_directory)
-            return render_template('view.html', folders=folders, viewer_directory=viewer_directory,details=details,remaining_tiles=remaining_tiles,marker_lat = marker_lat,marker_lng=marker_lng,date=lines[9], zooms = zooms_h,zoome=zoom_h )
+            return render_template('view.html', folders=folders, viewer_directory=viewer_directory,details=details,remaining_tiles=remaining_tiles,tiles_done=tiles_done,total_count=total_count,marker_lat = marker_lat,marker_lng=marker_lng,date=lines[9], zooms = zooms_h,zoome=zoom_h )
         except:
             details = False
             marker_lat = 0

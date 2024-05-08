@@ -37,7 +37,9 @@
             <input type="text" id="coordinates">
             <a href = "{{ url_for('index')}}"> <button style="background-color: rgb(224, 178, 118);color: #333;">Back to Downloader</button></a>
             {% if details and remaining_tiles > 0%}
-                <p>Remaining Tiles: {{remaining_tiles}}</p>
+            <p>Total Tiles: {{total_count}}</p>
+            <p style="color: green">Tiles Done: {{tiles_done}}</p>
+                <p style="color:red">Remaining Tiles: {{remaining_tiles}}</p>
                 <a href = "{{ url_for('continue_download')}}"> <button style="background-color: #3ba6ff;color: #333;">Continue downloading</button></a>
             {% else %}
                 <p style="">Download Completed</p>

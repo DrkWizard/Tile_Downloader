@@ -77,6 +77,13 @@
             function download_tiles() {
                 start = document.getElementById("zoom_start").value
                 end = document.getElementById("zoom_end").value
+                console.log(typeof start,end)
+                if(parseInt(start)<parseInt(end)){
+                    document.getElementById("download").style.display = "none";
+                    const spinnerElement = document.getElementById('loadingSpinner');
+                    const overlayElement = document.querySelector('.overlay');
+                    spinnerElement.style.display = "block";  
+                    overlayElement.innerHTML += " Downloading";
                 $.ajax({
                     url: '/continue',
                     method: 'POST',
@@ -91,7 +98,6 @@
                                 icon: "success"
                             }).then((result) => {
                                 if (result.isConfirmed) {
-                                    // Redirect to another page
                                     window.location.href = "{{ url_for('index')}}";
                                 }
                             });
@@ -100,14 +106,11 @@
                                 icon: "question",
                                 title: "Are you connected?",
                                 text: response.error,
-                                showDenyButton: true,
-                                confirmButtonText: "Try Again",
-                                denyButtonText: `Reset`
+                                showDenyButton: false,
+                                confirmButtonText: "Home",
                             }).then((result) => {
                                 if (result.isConfirmed) {
-                                    download_tiles();
-                                } else if (result.isDenied) {
-                                    window.location.href = "{{ url_for('index')}}";
+                                    window.location.href = "{{ url_for('index')}}";                                
                                 }
                             });
                         }
@@ -115,28 +118,24 @@
                     error: function(xhr, status, error) {
                         Swal.fire({
                             title: "Oops",
-                            text: "An error occurred while downloading",
-                            showDenyButton: true,
-                            confirmButtonText: "Try Again",
-                            denyButtonText: `Reset`
+                            text: error,
+                            showDenyButton: false,
+                            confirmButtonText: "Home",
                         }).then((result) => {
                             if (result.isConfirmed) {
-                                download_tiles();
-                            } else if (result.isDenied) {
                                 window.location.href = "{{ url_for('index')}}";
                             }
                         });
                     },
                 });
             }
+            else{
+                alert("Zoom level issues")
+            }
+            }
             
 
             function download_button(){
-                document.getElementById("download").style.display = "none";
-                const spinnerElement = document.getElementById('loadingSpinner');
-                const overlayElement = document.querySelector('.overlay');
-                spinnerElement.style.display = "block";  
-                overlayElement.innerHTML += " Downloading";
                 updateRemainingTiles();
                 setInterval(updateRemainingTiles, 5000)
                 download_tiles()

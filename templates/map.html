@@ -201,6 +201,9 @@
 
 
             dir.addEventListener("input", function() {
+                dir = document.getElementById("directory");
+                zoom_s = document.getElementById("zoom_start");
+                max_zoom_lvl = document.getElementById("zoom_end");
                 if (dir.value.trim() !== "" && max_zoom_lvl.value.trim() != "" &&  zoom_s.value.trim() != "" && drawnRectangle) {
                     calculatebtn.removeAttribute("disabled");
                     value = [northWest, northEast, southWest, southEast, center,dir.value,max_zoom_lvl.value,zoom_s.value,center];
@@ -209,8 +212,10 @@
                     
                 }
             })
-            max_zoom_lvl.addEventListener("input", function() {
-                // Enable the submit button if the input field is not empty
+            max_zoom_lvl.addEventListener("change", function() {
+                dir = document.getElementById("directory");
+                zoom_s = document.getElementById("zoom_start");
+                max_zoom_lvl = document.getElementById("zoom_end");
                 if (dir.value.trim() !== "" && max_zoom_lvl.value.trim() != "" && zoom_s.value.trim() != "" && drawnRectangle) {
                     calculatebtn.removeAttribute("disabled");
                     value = [northWest, northEast, southWest, southEast, center,dir.value,max_zoom_lvl.value,zoom_s.value,center];
@@ -219,7 +224,10 @@
                 }
             })
             zoom_s.addEventListener("input", function() {
-                // Enable the submit button if the input field is not empty
+                dir = document.getElementById("directory");
+                zoom_s = document.getElementById("zoom_start");
+                max_zoom_lvl = document.getElementById("zoom_end");
+                console.log(zoom_s.value,max_zoom_lvl.value)
                 if (dir.value.trim() !== "" && max_zoom_lvl.value.trim() != "" &&  zoom_s.value.trim() != "" && drawnRectangle) {
                     calculatebtn.removeAttribute("disabled");
                     value = [northWest, northEast, southWest, southEast, center,dir.value,max_zoom_lvl.value,zoom_s.value,center];
@@ -374,7 +382,15 @@
                     contentType: 'application/json',
                     data: JSON.stringify({'value': data}),
                     success: function(response) {
-                        sweet_alert(response.result,response.remaining,response.size)
+                        if(response.error){
+                            Swal.fire({
+                                title: "Zoom Levels issue",
+                                text: "Zoom from should be greater than zoom to",
+                                icon: "warning"
+                            });
+                        }
+                        else{
+                        sweet_alert(response.result,response.remaining,response.size)}
 
                     },
                     error: function(xhr, status, error) {
