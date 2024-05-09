@@ -75,8 +75,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.3.1/socket.io.js"></script>
     <script>
-
         if("{{internet}}"=="False"){
             Swal.fire({
                 title: "The Internet?",
@@ -107,16 +107,17 @@
             var coordinates = document.getElementById('coordinates').value.split(',');
             var lat = parseFloat(coordinates[0]);
             var lng = parseFloat(coordinates[1]);
+            console.log(lat,lng)
         
             if (isNaN(lat) || isNaN(lng)) {
                 alert('Invalid coordinates! Please enter valid latitude and longitude.');
                 return;
             }
-        
+            const latlng = { lat: lat, lng:lng}
             if (!marker) {
-                marker = L.marker([lat, lng]).addTo(map);
+                marker = L.marker(latlng).addTo(map);
             } else {
-                marker.setLatLng([lat, lng]);
+                marker.setLatLng(latlng);
             }
         }
         document.getElementById('coordinates').addEventListener('change', addOrUpdateMarker);
@@ -162,6 +163,7 @@
                 northWest = L.latLng(northEast.lat, southWest.lng);
                 southEast = L.latLng(southWest.lat, northEast.lng);
                 center = bounds.getCenter();
+                console.log(center)
                 var lengthCenter = L.latLng(center.lat, southEast.lng);
                 var breadthCenter = L.latLng(northEast.lat, center.lng);
             
@@ -242,10 +244,6 @@
                 drawnItems.removeLayer(drawnRectangle);
                 drawnRectangle = null;
                 map.removeLayer(marker);
-                map.removeLayer(lengthLine);
-                map.removeLayer(breadthLine);
-                map.removeLayer(lengthTextMarker);
-                map.removeLayer(breadthTextMarker);
                 document.querySelector("#latitude").value = ""
                 document.querySelector("#longitude").value = ""
                 document.querySelector("#coordinates").value = ""
@@ -307,7 +305,7 @@
                     } else {
                         Swal.fire({
                             icon: "question",
-                            title: "Are you connected?",
+                            title: "Download Error",
                             text: response.error,
                             showDenyButton: true,
                             confirmButtonText: "Try Again",
@@ -408,12 +406,22 @@
             document.getElementById('remaining_tiles').innerText =  (data.tiles_done*100/data.total_count).toFixed(2) + '%';
         });
         
-}
-function updateMinMax(value) {
-    var toInput = document.getElementById("zoom_end");
-    toInput.min = parseInt(value) + 1;
-}
+    }
+    function updateMinMax(value) {
+        var toInput = document.getElementById("zoom_end");
+        toInput.min = parseInt(value) + 1;
+    }
 
+    window.onbeforeunload = function (e) {
+        // Code to execute before the page is unloaded (e.g., when the browser window is closed)
+        // You can send an AJAX request to notify the server or perform cleanup tasks here
+        // This code may not work in all browsers and may not execute under certain conditions (e.g., if the browser crashes)
+        
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', '/stop', true);
+        xhr.send();
+        return 'Are you sure you want to leave?';
+    };
 
     </script>
 </body>

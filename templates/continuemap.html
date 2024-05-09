@@ -161,6 +161,17 @@
             var polyline = L.polyline(polylinePoints, { color: 'blue' }).addTo(map);
         }
 
+        window.onbeforeunload = function (e) {
+            // Code to execute before the page is unloaded (e.g., when the browser window is closed)
+            // You can send an AJAX request to notify the server or perform cleanup tasks here
+            // This code may not work in all browsers and may not execute under certain conditions (e.g., if the browser crashes)
+            
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', '/stop', true);
+            xhr.send();
+            return 'Are you sure you want to leave?';
+        };
+
 
     </script>
 </body>

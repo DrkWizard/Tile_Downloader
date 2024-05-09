@@ -1,8 +1,10 @@
-from flask import Flask, render_template, request, jsonify, send_file, send_from_directory
+from flask import Flask,render_template, request, jsonify, send_from_directory
 import os
 import concurrent.futures
 from map_downloader import number_of_tiles, download_tiles
 import time,requests,re
+import signal
+import redis 
 
 app = Flask(__name__)
 
@@ -25,6 +27,15 @@ main = os.path.join(cwd, "map_tile")
 if not os.path.exists(main):
     os.makedirs(main)
 
+
+def get_download_cancelled():
+    redis_client = redis.Redis(host='127.0.0.1', port=6379)  # Example connection
+    return redis_client.get('download_cancelled') == b'True'
+
+def set_download_cancelled(cancelled):
+    redis_client = redis.Redis(host='127.0.0.1', port=6379)  # Example connection
+    redis_client.set('download_cancelled', 'True' if cancelled else 'False')
+    
 def modify(filepath, pattern, replacement):
     with open(filepath, "r+") as file:
         lines = file.readlines()
@@ -45,7 +56,7 @@ def check_internet_connection():
 
 @app.route('/')
 def index():
-    internet = check_internet_connection()    
+    internet = check_internet_connection()
     return render_template('map.html',internet=internet)
 
 
@@ -88,6 +99,7 @@ def calculate_success():
 
 @app.route('/downloadcont')
 def continue_download():
+    set_download_cancelled(False)
     internet = check_internet_connection()    
     text_path = os.path.join(main, viewer_directory, "details.txt")
     with open(text_path, "r") as file:
@@ -105,18 +117,20 @@ def continue_download():
 @app.route('/download', methods=['POST'])
 def download():
     try:
+
         d = request.json
         if d["value"] == 1:
+            set_download_cancelled(False)
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 future = executor.submit(download_tiles,zoom_start, zoom_lvl, directory, northwest["lat"], northwest["lng"], southwest["lat"], southeast["lng"],center)
                 result = future.result()
-                print(result)
                 if result:
                     return jsonify({'success': True})
                 else:
                     raise Exception("Failed to download Tile")
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
+    
     
 @app.route('/continue', methods=['POST'])
 def continue_d():
@@ -133,6 +147,7 @@ def continue_d():
             zoom_s = int(d["start"])
             zoom_e = int(d["end"])
             modify(text_path, r'^.*zoom start:.*$', f"zoom start: {zoom_s}")
+            modify(text_path, r'^.*zoom end:.*$', f"zoom end: {zoom_e}")
 
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 future = executor.submit(download_tiles,int(zoom_s), int(zoom_e), viewer_directory, float(top), float(left), float(bottom), float(right),center)
@@ -144,8 +159,6 @@ def continue_d():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
-        
-        
         
 @app.route('/viewtiles', methods=['POST', 'GET'])
 def view():
@@ -203,6 +216,7 @@ def remaining_tiles():
     total_count, remaining_tiles, tiles_done = number_of_tiles(zoom_start,zoom_lvl, northwest["lat"], northwest["lng"],southwest["lat"], southeast["lng"], directory)
     return jsonify(total_count=total_count, tiles_done=tiles_done)
 
+
 @app.route('/remaining_tiles_cont', methods=['GET'])
 def remaining_tiles_cont():
     text_path = os.path.join(main, viewer_directory, "details.txt")
@@ -219,7 +233,15 @@ def remaining_tiles_cont():
 
 
 
-
+@app.route('/stop')
+def stop_download():
+    # Ensure that the request is coming from a trusted source (optional)
+    if request.remote_addr == '127.0.0.1':  # Example: Allow requests only from localhost
+        set_download_cancelled(True)
+        return 'Download stopped successfully'
+    else:
+        return 'Unauthorized', 403  # Return Forbidden status if the request is not
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    app.run()
+

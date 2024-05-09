@@ -85,33 +85,39 @@ def number_of_tiles(zoom_start,max_zoom_level, top, left, bottom, right, output_
 def downloader(zoom, output_dir, xs, xe, ys, ye):
     url_pattern = "https://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}&s=Ga"
     timeout = 5  # Adjust timeout as needed
-    
-    if not os.path.exists(os.path.join(main,output_dir, str(zoom))):
-        os.makedirs(os.path.join(main,output_dir, str(zoom)))
+    if not os.path.exists(os.path.join(main, output_dir, str(zoom))):
+        os.makedirs(os.path.join(main, output_dir, str(zoom)))
 
     for x in range(xs, xe + 1):
-        if not os.path.exists(os.path.join(main,output_dir, str(zoom), str(x))):
-            os.makedirs(os.path.join(main,output_dir, str(zoom), str(x)))
+        
+        if not os.path.exists(os.path.join(main, output_dir, str(zoom), str(x))):
+            os.makedirs(os.path.join(main, output_dir, str(zoom), str(x)))
 
         for y in range(ys, ye + 1):
-            filename = os.path.join(os.path.join(main,output_dir, str(zoom), str(x)), f"{y}.jpeg")
+            
+            filename = os.path.join(os.path.join(main, output_dir, str(zoom), str(x)), f"{y}.jpeg")
 
             if not os.path.exists(filename):
                 url = url_pattern.format(z=zoom, x=x, y=y)
                 response = requests.get(url=url, stream=True, timeout=timeout)
                 if response.status_code == 200:
+                    from app1 import get_download_cancelled
+                    if get_download_cancelled():
+                        print("Download cancelled by user.")
+                        return False
                     image = np.asarray(bytearray(response.content), dtype="uint8")
                     image = cv.imdecode(image, cv.IMREAD_COLOR)
                     cv.imwrite(filename, image)
                     print(f" [+] Zoom : {zoom} | Downloader tile {filename}")
                 else:
                     print(f' [+] Failed to download tile {filename} | Status Code: {response.status_code}')
-                    
 
-def download_tiles(zoom_start,max_zoom_level, dir_name, top, left, bottom, right,center):
-    if not os.path.exists(os.path.join(main,dir_name)):
-        os.makedirs(os.path.join(main,dir_name))
-        text_path = os.path.join(main,dir_name,"details.txt")
+    return True
+
+def download_tiles(zoom_start, max_zoom_level, dir_name, top, left, bottom, right, center):
+    if not os.path.exists(os.path.join(main, dir_name)):
+        os.makedirs(os.path.join(main, dir_name))
+        text_path = os.path.join(main, dir_name, "details.txt")
         with open(text_path, "w") as file:
             file.write(f"""directory: {dir_name}
 top: {top}
@@ -129,19 +135,21 @@ Date downloaded: {datetime.now()}""")
             x_tile2, y_tile2 = tile_consideration(top, right, zoom)
             x_tile3, y_tile3 = tile_consideration(bottom, left, zoom)
             x_tile4, y_tile4 = tile_consideration(bottom, right, zoom)
-            
+
             xs = min(x_tile1, x_tile3)
             xe = max(x_tile2, x_tile4)
             ys = min(y_tile1, y_tile2)
             ye = max(y_tile3, y_tile4)
-            
+
             try:
-                downloader(zoom, dir_name, xs, xe, ys, ye)
+                if not downloader(zoom, dir_name, xs, xe, ys, ye):
+                    return False
             except Exception as e:
                 print(f' [+] Error during download: {e}')
                 time.sleep(5)
                 try:
-                    downloader(zoom, dir_name, xs, xe, ys, ye)
+                    if not downloader(zoom, dir_name, xs, xe, ys, ye):
+                        return False
                 except:
                     print(f' [+] Failed to download tile | Error: {e}')
                     return False
